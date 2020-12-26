@@ -1,4 +1,6 @@
+from moviepy.editor import *
 from moviepy.audio.AudioClip import AudioArrayClip
+import os
 
 OPTIMIZED_PARAMS = {
     'instagram':{
@@ -7,8 +9,8 @@ OPTIMIZED_PARAMS = {
     }
 }
 
-class Video:
-    def __init__(self,song,artist_name:str,track_name:str,music_bpm:float):
+class MusicVideo:
+    def __init__(self,song,path_video:str,artist_name:str,track_name:str,music_bpm:float,square=True):
         """Generic video object.
         This class contains all parameters common to all styles of videos to be generated.
 
@@ -16,13 +18,24 @@ class Video:
         :param artist_name: Artist name
         :param track_name: Track name
         :param music_bpm: BPM of the music
+        :param square: Set the size of the clip as "square"
         """
 
         # Size
 
         self.width = None
         self.height = None
+
         self.set_params()
+
+        # Video
+
+        self.main_clip = VideoFileClip(path_video, fps_source="fps")
+        self.bpm_video = None
+
+        if square:
+
+            self.set_main_clip_squared_size()
 
         # Song
 
@@ -52,28 +65,41 @@ class Video:
         self.width = OPTIMIZED_PARAMS.get(platform).get('width')
         self.height = OPTIMIZED_PARAMS.get(platform).get('height')
 
+    def set_main_clip_as_loop(self,bpm_video:float):
+        """Set the main clip as a loop video.
+        """
 
-class LoopVideo(Video):
+        self.bpm_video = bpm_video
 
-    def __init__(self,song,artist_name,track_name,music_bpm,video_bpm):
+        clip_duration = self.main_clip.duration
 
-        super().__init__(song,artist_name,track_name,music_bpm)
+        limit_duration = (clip_duration // (60 / self.bpm_video)) * (60 / self.bpm_video)
 
-        # Rhythm
-        
-        self.video_bpm = video_bpm
+        self.main_clip = self.main_clip.set_duration(limit_duration)
+
+    def set_main_clip_squared_size(self):
+        """Resize the video.
+        """
+
+        # Resize
+        self.main_clip = self.main_clip.crop(x_center=int(self.main_clip.w / 2),
+                        y_center=int(self.main_clip.h / 2),
+                        width=min(self.main_clip.w, self.main_clip.h),
+                        height=min(self.main_clip.w, self.main_clip.h))
 
 
 
 
-def squared_size(clip):
-    """Resize the video.
-    """
+    def gen_txt_assets():
 
-    # Resize
-    clip = clip.crop(x_center=int(clip.w / 2),
-                     y_center=int(clip.h / 2),
-                     width=min(clip.w, clip.h),
-                     height=min(clip.w, clip.h))
+        txtClip_artist = TextClip(artist_name,
+                          color='white',
+                          font="Helvetica",
+                          kerning=5,
+                          size=(textwidth, None))
 
-    return (clip)
+        txtClip_track = TextClip(track_name,
+                                color='LightPink',
+                                font="Helvetica-bold",
+                                kerning=5,
+                                size=(textwidth, None))
