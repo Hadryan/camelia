@@ -45,7 +45,9 @@ class MusicVideo:
 
         if square:
 
-            self.set_main_clip_squared_size()
+            self.main_clip = self.transform_squared_size(self.main_clip, prop=0.8)
+
+        self.intro = None
 
         # Song
 
@@ -108,20 +110,33 @@ class MusicVideo:
 
         self.main_clip = self.main_clip.loop(n=nb_loops)
 
-    def set_main_clip_squared_size(self):
+    def add_intro(self, path_intro):
+
+        self.intro = VideoFileClip(path_intro, fps_source="fps")
+
+        self.intro = self.transform_squared_size(self.intro)
+
+        # Loop the clip
+        nb_loops = self.audioclip.duration // self.intro.duration
+
+        self.intro = self.intro.loop(n=nb_loops).set_position("center")
+
+    def transform_squared_size(self, clip, prop=1):
         """Resize the video."""
 
         # Resize
-        self.main_clip = self.main_clip.crop(
-            x_center=int(self.main_clip.w / 2),
-            y_center=int(self.main_clip.h / 2),
-            width=min(self.main_clip.w, self.main_clip.h),
-            height=min(self.main_clip.w, self.main_clip.h),
+        clip = clip.crop(
+            x_center=int(clip.w / 2),
+            y_center=int(clip.h / 2),
+            width=min(clip.w, clip.h),
+            height=min(clip.w, clip.h),
         )
 
-        self.main_clip = self.main_clip.resize((self.width, self.height)).resize(1)
+        clip = clip.resize((self.width, self.height)).resize(prop)
 
-    def sync_bpm_clip(self, exact_loop=False):
+        return clip
+
+    def sync_bpm_clip(self, clip, exact_loop=False):
         """Sync the video with the music."""
 
         if exact_loop:
@@ -130,12 +145,17 @@ class MusicVideo:
             loops = self.music_bpm // self.bpm_video
             factor = self.music_bpm / (self.bpm_video * loops)
 
-        self.main_clip = self.main_clip.speedx(factor=factor)
+        clip = clip.speedx(factor=factor)
 
-    def gen_txt_assets(self):
-        """Generate text assets."""
+        return clip
 
-        textwidth = 0.2 * self.width
+    def gen_txt_assets(self, prop_screen=0.4):
+        """Generate text assets.
+        :param prop_screen: Set the size of the text"""
+
+        textwidth = prop_screen * self.width
+        txt_start = 0
+        txt_duration = self.duration * 4
 
         self.txtClip_artist = TextClip(
             self.artist_name,
@@ -153,22 +173,21 @@ class MusicVideo:
             size=(textwidth, None),
         )
 
-        # Say that you want it to appear 10s at the center of the screen
+        txt_artist_pos = (self.width / 2 - self.txtClip_artist.w / 2, 0.1 * self.height)
+        txt_track_pos = (self.width / 2 - self.txtClip_track.w / 2, 0.25 * self.height)
+
+        # Position
+
         self.txtClip_artist = (
-            self.txtClip_artist.set_pos(
-                (self.width / 2 - self.txtClip_artist.w / 2, 0.1 * self.height)
-            )
-            .set_start(self.duration * 0)
-            .set_duration(self.duration * 4)
+            self.txtClip_artist.set_pos(txt_artist_pos)
+            .set_start(txt_start)
+            .set_duration(txt_duration)
         )
 
-        # Say that you want it to appear 10s at the center of the screen
         self.txtClip_track = (
-            self.txtClip_track.set_pos(
-                (self.width / 2 - self.txtClip_track.w / 2, 0.25 * self.height)
-            )
-            .set_start(self.duration * 0)
-            .set_duration(self.duration * 4)
+            self.txtClip_track.set_pos(txt_track_pos)
+            .set_start(txt_start)
+            .set_duration(txt_duration)
         )
 
     def generate_video(self, cut=None):
@@ -176,6 +195,12 @@ class MusicVideo:
 
         :param cut: Truncate the video (in seconds)
         """
+
+        intro = []
+
+        if self.intro:
+
+            intro.append(self.intro)
 
         if self.drop_beats:
 
@@ -185,7 +210,8 @@ class MusicVideo:
 
         # Overlay the text clip on the first video clip
         video = CompositeVideoClip(
-            [
+            intro
+            + [
                 self.main_clip.set_position("center"),
                 self.txtClip_artist,
                 self.txtClip_track,
