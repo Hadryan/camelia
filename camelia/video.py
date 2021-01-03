@@ -17,6 +17,7 @@ class MusicVideo:
         artist_name: str,
         track_name: str,
         music_bpm: float,
+        drop_beats=None,
         square=True,
     ):
         """Generic video object.
@@ -40,6 +41,7 @@ class MusicVideo:
 
         self.main_clip = VideoFileClip(path_video, fps_source="fps")
         self.bpm_video = None
+        self.drop_beats = drop_beats
 
         if square:
 
@@ -48,7 +50,9 @@ class MusicVideo:
         # Song
 
         self.song = song
-        self.audioclip = AudioArrayClip(self.song.waveform, fps=self.song.sr)
+        self.audioclip = AudioArrayClip(
+            self.song.waveform.reshape(-1, 2), fps=self.song.sr
+        )
 
         # Rhythm
 
@@ -73,20 +77,23 @@ class MusicVideo:
         self.width = OPTIMIZED_PARAMS.get(platform).get("width")
         self.height = OPTIMIZED_PARAMS.get(platform).get("height")
 
-    def set_main_clip_as_loop(self, bpm_video: float, keep_only_one_loop=False):
+    def set_main_clip_as_loop(self, bpm_video: float = None, keep_only_one_loop=False):
         """Set the main clip as a loop video."""
-
-        self.bpm_video = bpm_video
 
         clip_duration = self.main_clip.duration
 
-        video_loop_duration = 60 / self.bpm_video
+        if bpm_video:
+            self.bpm_video = bpm_video
+            video_loop_duration = 60 / self.bpm_video
+
+        else:
+
+            self.bpm_video = round(60 / clip_duration, 0)
+            video_loop_duration = clip_duration
 
         if keep_only_one_loop:
 
-            limit_duration = (
-                clip_duration // video_loop_duration
-            ) * video_loop_duration
+            limit_duration = video_loop_duration
 
         else:
 
@@ -95,6 +102,11 @@ class MusicVideo:
             ) * video_loop_duration
 
         self.main_clip = self.main_clip.set_duration(limit_duration)
+
+        # Loop the clip
+        nb_loops = self.audioclip.duration // self.main_clip.duration
+
+        self.main_clip = self.main_clip.loop(n=nb_loops)
 
     def set_main_clip_squared_size(self):
         """Resize the video."""
@@ -109,15 +121,21 @@ class MusicVideo:
 
         self.main_clip = self.main_clip.resize((self.width, self.height)).resize(1)
 
-    def sync_bpm_clip(self):
+    def sync_bpm_clip(self, exact_loop=False):
         """Sync the video with the music."""
-        self.main_clip = self.main_clip.speedx(factor=self.music_bpm / self.bpm_video)
+
+        if exact_loop:
+            factor = self.music_bpm / self.bpm_video
+        else:
+            loops = self.music_bpm // self.bpm_video
+            factor = self.music_bpm / (self.bpm_video * loops)
+
+        self.main_clip = self.main_clip.speedx(factor=factor)
 
     def gen_txt_assets(self):
         """Generate text assets."""
 
         textwidth = 0.2 * self.width
-        textheight = 0.2 * self.height
 
         self.txtClip_artist = TextClip(
             self.artist_name,
@@ -140,7 +158,7 @@ class MusicVideo:
             self.txtClip_artist.set_pos(
                 (self.width / 2 - self.txtClip_artist.w / 2, 0.1 * self.height)
             )
-            .set_start(self.duration * 2)
+            .set_start(self.duration * 0)
             .set_duration(self.duration * 4)
         )
 
@@ -149,7 +167,7 @@ class MusicVideo:
             self.txtClip_track.set_pos(
                 (self.width / 2 - self.txtClip_track.w / 2, 0.25 * self.height)
             )
-            .set_start(self.duration * 2)
+            .set_start(self.duration * 0)
             .set_duration(self.duration * 4)
         )
 
@@ -158,6 +176,12 @@ class MusicVideo:
 
         :param cut: Truncate the video (in seconds)
         """
+
+        if self.drop_beats:
+
+            self.main_clip = self.main_clip.set_start(
+                (self.drop_beats) * self.duration, change_end=False
+            )
 
         # Overlay the text clip on the first video clip
         video = CompositeVideoClip(
