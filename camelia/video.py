@@ -1,5 +1,6 @@
 from moviepy.editor import *
 from moviepy.audio.AudioClip import AudioArrayClip
+from text_assets import TextAssets
 
 OPTIMIZED_PARAMS = {
     "instagram": {
@@ -66,8 +67,7 @@ class MusicVideo:
         self.artist_name = artist_name
         self.track_name = track_name
 
-        self.txtClip_artist = None
-        self.txtClip_track = None
+        self.text_assets = TextAssets(self.height, self.artist_name, self.track_name)
 
     def set_params(self, platform: str = "instagram") -> None:
         """Set optimized params for platforms.
