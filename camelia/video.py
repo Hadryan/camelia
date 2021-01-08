@@ -73,7 +73,12 @@ class MusicVideo:
         self.track_name = track_name
 
         self.text_assets = TextAssets(
-            self.width, self.height, self.artist_name, self.track_name, self.duration, self.audioclip.duration
+            self.width,
+            self.height,
+            self.artist_name,
+            self.track_name,
+            self.duration,
+            self.drop_beats,
         )
 
     def set_params(self, platform: str = "square_preview") -> None:
