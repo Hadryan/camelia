@@ -3,7 +3,11 @@ from moviepy.audio.AudioClip import AudioArrayClip
 from text_assets import TextAssets
 
 OPTIMIZED_PARAMS = {
-    "instagram": {
+    "square_preview": {
+        "width": 400,
+        "height": 400,
+    },
+    "square_instagram": {
         "width": 1080,
         "height": 1080,
     }
@@ -67,9 +71,11 @@ class MusicVideo:
         self.artist_name = artist_name
         self.track_name = track_name
 
-        self.text_assets = TextAssets(self.height, self.artist_name, self.track_name)
+        self.text_assets = TextAssets(
+            self.width, self.height, self.artist_name, self.track_name
+        )
 
-    def set_params(self, platform: str = "instagram") -> None:
+    def set_params(self, platform: str = "square_preview") -> None:
         """Set optimized params for platforms.
 
         :param platform: Platform for the video (instagram, twitter etc.)
@@ -135,6 +141,8 @@ class MusicVideo:
         clip = clip.resize((self.width, self.height)).resize(prop)
 
         return clip
+    
+    def 
 
     def sync_bpm_clip(self, clip, exact_loop=False):
         """Sync the video with the music."""
