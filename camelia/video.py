@@ -1,4 +1,5 @@
 from moviepy.editor import *
+import moviepy
 from moviepy.audio.AudioClip import AudioArrayClip
 from .text_assets import TextAssets
 import math
@@ -25,6 +26,7 @@ class MusicVideo:
         music_bpm: float,
         drop_beats=None,
         square=True,
+        watermark=False,
     ):
         """Generic video object.
         This class contains all parameters common to all styles of videos to be generated.
@@ -81,7 +83,15 @@ class MusicVideo:
             self.drop_beats,
         )
 
-    def set_params(self, platform: str = "square_preview") -> None:
+        # Watermark
+
+        self.watermark = None
+
+        if watermark:
+
+            self.watermark = self.add_watermark()
+
+    def set_params(self, platform: str = "square_instagram") -> None:
         """Set optimized params for platforms.
 
         :param platform: Platform for the video (instagram, twitter etc.)
@@ -145,6 +155,49 @@ class MusicVideo:
         clip = clip.loop(n=nb_loops).set_position("center")
 
         self.background_clips.append(clip)
+
+    def add_watermark(
+        self, path="../design_assets/logo_transparent.gif", sync=True, prop_screen=0.22
+    ):
+        """Add background clips.
+
+        :param path: Path to the background clip
+        :param sync: Sync the watermark
+        :param prop_screen: Proportion of the screen.
+        """
+
+        clip = VideoFileClip(path, fps_source="fps", has_mask=True)
+
+        # The GIF is too large, we crop it
+        # TO-DO: Generate a better GIF
+        clip = clip.crop(
+            x_center=int(clip.w / 2),
+            y_center=int(clip.h / 2),
+            width=clip.w * 0.45,
+            height=clip.h * 0.55,
+        )
+
+        clip = clip.resize(width=prop_screen * self.width)
+
+        # Removing black background
+
+        # clip = moviepy.editor.vfx.mask_color(clip, color=[0, 0, 0], thr=20, s=10)
+
+        if sync:
+
+            clip = self.sync_bpm_clip(clip)
+
+        # Loop the clip
+        nb_loops = (self.audioclip.duration // clip.duration) + 1
+
+        clip = clip.loop(n=nb_loops).set_position(
+            (
+                self.width - clip.w - self.width * 0.005,
+                self.height - clip.h - self.height * 0.005,
+            )
+        )
+
+        return clip
 
     def transform_squared_size(self, clip, prop=1):
         """Resize the video."""
@@ -253,6 +306,12 @@ class MusicVideo:
 
             for txt_clip in self.text_assets.text_clips:
                 clips.append(txt_clip)
+
+        # Watermark
+
+        if self.watermark:
+
+            clips.append(self.watermark)
 
         video = CompositeVideoClip(clips)
 
