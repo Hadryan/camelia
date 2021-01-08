@@ -3,14 +3,19 @@ from moviepy.editor import *
 TEXT_PRESETS = {
     "fancy": {
         "artist": {"color": "white", "font": "Helvetica"},
-        "track": {"color": "Helvetica", "font": "Helvetica-bold"},
+        "track": {"color": "LightPink", "font": "Helvetica-bold"},
     }
 }
 
 
 class TextAssets:
     def __init__(
-        width: float, height: float, artist_name: str, track_name: str, duration: float
+        self,
+        width: float,
+        height: float,
+        artist_name: str,
+        track_name: str,
+        duration: float,
     ):
         """Init TextAssets.
 
@@ -30,7 +35,7 @@ class TextAssets:
         # Generated clips
         self.text_clips = None
 
-    def generate_clips(self, prop_screen, graphic_chart="fancy"):
+    def generate_clips(self, prop_screen=0.8, graphic_chart="fancy"):
         """Generate text clips."""
 
         textwidth = prop_screen * self.width
@@ -52,7 +57,10 @@ class TextAssets:
         )
 
         txt_artist_pos = (self.width / 2 - txtClip_artist.w / 2, 0.1 * self.height)
-        txt_track_pos = (self.width / 2 - txtClip_track.w / 2, 0.25 * self.height)
+
+        offset_y = txtClip_artist.h + txt_artist_pos[1] + 0.1
+
+        txt_track_pos = (self.width / 2 - txtClip_track.w / 2, offset_y)
 
         # Position
 
@@ -63,6 +71,8 @@ class TextAssets:
         self.text_clips = [txtClip_artist, txtClip_track]
 
     def set_timing(self, mode="before_drop"):
+
+        clips_to_replace = []
 
         if mode == "before_drop":
 
@@ -75,4 +85,7 @@ class TextAssets:
 
         for clip in self.text_clips:
 
-            clip = clip.set_start(start).set_start(duration)
+            clip = clip.set_start(start).set_duration(duration)
+            clips_to_replace.append(clip)
+
+        self.text_clips = clips_to_replace

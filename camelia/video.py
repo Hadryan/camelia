@@ -1,6 +1,6 @@
 from moviepy.editor import *
 from moviepy.audio.AudioClip import AudioArrayClip
-from text_assets import TextAssets
+from .text_assets import TextAssets
 
 OPTIMIZED_PARAMS = {
     "square_preview": {
@@ -10,7 +10,7 @@ OPTIMIZED_PARAMS = {
     "square_instagram": {
         "width": 1080,
         "height": 1080,
-    }
+    },
 }
 
 
@@ -72,7 +72,7 @@ class MusicVideo:
         self.track_name = track_name
 
         self.text_assets = TextAssets(
-            self.width, self.height, self.artist_name, self.track_name
+            self.width, self.height, self.artist_name, self.track_name, self.duration
         )
 
     def set_params(self, platform: str = "square_preview") -> None:
@@ -141,8 +141,6 @@ class MusicVideo:
         clip = clip.resize((self.width, self.height)).resize(prop)
 
         return clip
-    
-    def 
 
     def sync_bpm_clip(self, clip, exact_loop=False):
         """Sync the video with the music."""
@@ -204,11 +202,15 @@ class MusicVideo:
         :param cut: Truncate the video (in seconds)
         """
 
-        intro = []
+        clips = []
+
+        # Intro
 
         if self.intro:
 
-            intro.append(self.intro)
+            clips.append(self.intro)
+
+        # Drop
 
         if self.drop_beats:
 
@@ -216,21 +218,25 @@ class MusicVideo:
                 (self.drop_beats) * self.duration, change_end=False
             )
 
-        # Overlay the text clip on the first video clip
-        video = CompositeVideoClip(
-            intro
-            + [
-                self.main_clip.set_position("center"),
-                self.txtClip_artist,
-                self.txtClip_track,
-            ]
-        )
+        # Main clip
+
+        clips.append(self.main_clip.set_position("center"))
+
+        # Text
+
+        if self.text_assets.text_clips:
+
+            for txt_clip in self.text_assets.text_clips:
+                clips.append(txt_clip)
+
+        video = CompositeVideoClip(clips)
 
         video = video.set_audio(self.audioclip)
 
         # Cut de la video
 
         if cut:
+
             video = video.subclip(0, cut)
 
         return video
