@@ -91,7 +91,7 @@ class MusicVideo:
 
             self.watermark = self.add_watermark()
 
-    def set_params(self, platform: str = "square_instagram") -> None:
+    def set_params(self, platform: str = "square_preview") -> None:
         """Set optimized params for platforms.
 
         :param platform: Platform for the video (instagram, twitter etc.)
