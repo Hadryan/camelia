@@ -16,6 +16,7 @@ class TextAssets:
         artist_name: str,
         track_name: str,
         duration: float,
+        total_duration: float,
     ):
         """Init TextAssets.
 
@@ -31,11 +32,12 @@ class TextAssets:
         self.artist_name = artist_name
         self.track_name = track_name
         self.duration = duration
+        self.total_duration = total_duration
 
         # Generated clips
         self.text_clips = None
 
-    def generate_clips(self, prop_screen=0.8, graphic_chart="fancy"):
+    def generate_clips(self, prop_screen=0.4, graphic_chart="fancy"):
         """Generate text clips."""
 
         textwidth = prop_screen * self.width
@@ -70,7 +72,7 @@ class TextAssets:
 
         self.text_clips = [txtClip_artist, txtClip_track]
 
-    def set_timing(self, mode="before_drop"):
+    def set_timing(self, mode="always"):
 
         clips_to_replace = []
 
@@ -78,6 +80,11 @@ class TextAssets:
 
             start = 0
             duration = self.duration * 4
+
+        elif mode == "always":
+
+            start = 0
+            duration = self.total_duration
 
         else:
 

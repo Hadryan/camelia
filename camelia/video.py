@@ -1,6 +1,7 @@
 from moviepy.editor import *
 from moviepy.audio.AudioClip import AudioArrayClip
 from .text_assets import TextAssets
+import math
 
 OPTIMIZED_PARAMS = {
     "square_preview": {
@@ -52,7 +53,7 @@ class MusicVideo:
 
             self.main_clip = self.transform_squared_size(self.main_clip, prop=0.8)
 
-        self.intro = None
+        self.background_clips = []
 
         # Song
 
@@ -72,7 +73,7 @@ class MusicVideo:
         self.track_name = track_name
 
         self.text_assets = TextAssets(
-            self.width, self.height, self.artist_name, self.track_name, self.duration
+            self.width, self.height, self.artist_name, self.track_name, self.duration, self.audioclip.duration
         )
 
     def set_params(self, platform: str = "square_preview") -> None:
@@ -85,47 +86,60 @@ class MusicVideo:
         self.width = OPTIMIZED_PARAMS.get(platform).get("width")
         self.height = OPTIMIZED_PARAMS.get(platform).get("height")
 
-    def set_main_clip_as_loop(self, bpm_video: float = None, keep_only_one_loop=False):
-        """Set the main clip as a loop video."""
+    def loop_clip(self, clip, bpm_video: float = None, crossfadein: float = None):
+        """Loop main clip.
 
-        clip_duration = self.main_clip.duration
+        So far the clip is looped for the whole video and then starts late
 
-        if bpm_video:
-            self.bpm_video = bpm_video
-            video_loop_duration = 60 / self.bpm_video
+        :param bpm_video: BPM of the video
+        :param crossfade: Duration of the crossfadein (in % of loops), if negative then the clip starts before the drop
+        :param early_crossfadein:"""
 
-        else:
+        clip_duration = clip.duration
+        start_offset = 0
 
-            self.bpm_video = round(60 / clip_duration, 0)
-            video_loop_duration = clip_duration
+        # Fadein
 
-        if keep_only_one_loop:
+        if crossfadein:
 
-            limit_duration = video_loop_duration
-
-        else:
-
-            limit_duration = (
-                clip_duration // video_loop_duration
-            ) * video_loop_duration
-
-        self.main_clip = self.main_clip.set_duration(limit_duration)
+            # We only want an offset when it's negative
+            start_offset = min(crossfadein * clip_duration, 0)
 
         # Loop the clip
-        nb_loops = self.audioclip.duration // self.main_clip.duration
+        nb_loops = (self.audioclip.duration // clip.duration) + 1
 
-        self.main_clip = self.main_clip.loop(n=nb_loops)
+        clip = clip.loop(n=nb_loops).crossfadein(abs(crossfadein))
 
-    def add_intro(self, path_intro):
+        # Drop
 
-        self.intro = VideoFileClip(path_intro, fps_source="fps")
+        if self.drop_beats:
 
-        self.intro = self.transform_squared_size(self.intro)
+            start = max((self.drop_beats) * self.duration - start_offset, 0)
+
+            clip = clip.set_start(start, change_end=False)
+
+        return clip
+
+    def add_background_clip(self, path, sync=False):
+        """Add background clips.
+
+        :param path: Path to the background clip
+        """
+
+        clip = VideoFileClip(path, fps_source="fps")
+
+        clip = self.transform_squared_size(clip)
+
+        if sync:
+
+            clip = self.sync_bpm_clip(clip)
 
         # Loop the clip
-        nb_loops = self.audioclip.duration // self.intro.duration
+        nb_loops = (self.audioclip.duration // clip.duration) + 1
 
-        self.intro = self.intro.loop(n=nb_loops).set_position("center")
+        clip = clip.loop(n=nb_loops).set_position("center")
+
+        self.background_clips.append(clip)
 
     def transform_squared_size(self, clip, prop=1):
         """Resize the video."""
@@ -142,14 +156,28 @@ class MusicVideo:
 
         return clip
 
-    def sync_bpm_clip(self, clip, exact_loop=False):
+    def sync_bpm_clip(self, clip, bpm_video=None, exact_loop=False):
         """Sync the video with the music."""
 
-        if exact_loop:
-            factor = self.music_bpm / self.bpm_video
+        # If the BPM of the video is known we might have to truncate it
+        if bpm_video:
+            video_loop_duration = 60 / bpm_video
+
+        # Otherwise we assume it's a perfect loop
         else:
-            loops = self.music_bpm // self.bpm_video
-            factor = self.music_bpm / (self.bpm_video * loops)
+            bpm_video = round(60 / clip.duration, 0)
+            video_loop_duration = clip.duration
+
+        limit_duration = (clip.duration // video_loop_duration) * video_loop_duration
+
+        clip = clip.set_duration(limit_duration)
+
+        # Number of loops to fit with the smallest BPM unity of the music
+
+        loops = self.music_bpm // bpm_video
+
+        # Factor to adjust speed
+        factor = self.music_bpm / (bpm_video * loops)
 
         clip = clip.speedx(factor=factor)
 
@@ -204,19 +232,11 @@ class MusicVideo:
 
         clips = []
 
-        # Intro
+        # Background clips
 
-        if self.intro:
+        for clip in self.background_clips:
 
-            clips.append(self.intro)
-
-        # Drop
-
-        if self.drop_beats:
-
-            self.main_clip = self.main_clip.set_start(
-                (self.drop_beats) * self.duration, change_end=False
-            )
+            clips.append(clip)
 
         # Main clip
 
