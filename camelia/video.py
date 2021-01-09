@@ -241,47 +241,6 @@ class MusicVideo:
 
         return clip
 
-    def gen_txt_assets(self, prop_screen=0.4):
-        """Generate text assets.
-        :param prop_screen: Set the size of the text"""
-
-        textwidth = prop_screen * self.width
-        txt_start = 0
-        txt_duration = self.duration * 4
-
-        self.txtClip_artist = TextClip(
-            self.artist_name,
-            color="white",
-            font="Helvetica",
-            kerning=5,
-            size=(textwidth, None),
-        )
-
-        self.txtClip_track = TextClip(
-            self.track_name,
-            color="LightPink",
-            font="Helvetica-bold",
-            kerning=5,
-            size=(textwidth, None),
-        )
-
-        txt_artist_pos = (self.width / 2 - self.txtClip_artist.w / 2, 0.1 * self.height)
-        txt_track_pos = (self.width / 2 - self.txtClip_track.w / 2, 0.25 * self.height)
-
-        # Position
-
-        self.txtClip_artist = (
-            self.txtClip_artist.set_pos(txt_artist_pos)
-            .set_start(txt_start)
-            .set_duration(txt_duration)
-        )
-
-        self.txtClip_track = (
-            self.txtClip_track.set_pos(txt_track_pos)
-            .set_start(txt_start)
-            .set_duration(txt_duration)
-        )
-
     def generate_video(self, cut=None):
         """Generate final video.
 
