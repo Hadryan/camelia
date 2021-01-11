@@ -25,17 +25,18 @@ class MusicVideo:
         track_name: str,
         music_bpm: float,
         drop_beats=None,
-        square=True,
         watermark=False,
     ):
         """Generic video object.
         This class contains all parameters common to all styles of videos to be generated.
 
         :param song: Song
+        :param path_video: Path to the video
         :param artist_name: Artist name
         :param track_name: Track name
         :param music_bpm: BPM of the music
-        :param square: Set the size of the clip as "square"
+        :param drop_beats: Number of beats before drop
+        :param watermark: If set to True: adds a watermark on the corner of the video
         """
 
         # Size
@@ -51,9 +52,7 @@ class MusicVideo:
         self.bpm_video = None
         self.drop_beats = drop_beats
 
-        if square:
-
-            self.main_clip = self.transform_squared_size(self.main_clip, prop=0.8)
+        self.main_clip = self.process_size_clip(self.main_clip, prop=0.8)
 
         self.background_clips = []
 
@@ -98,8 +97,22 @@ class MusicVideo:
         :return: None
         """
 
-        self.width = OPTIMIZED_PARAMS.get(platform).get("width")
-        self.height = OPTIMIZED_PARAMS.get(platform).get("height")
+        width = OPTIMIZED_PARAMS.get(platform).get("width")
+        height = OPTIMIZED_PARAMS.get(platform).get("height")
+
+        self.width = width
+        self.height = height
+
+    def process_size_clip(self, clip, prop: float = 1):
+        """Process size of the clip."""
+
+        # Square size
+        if self.width == self.height:
+            clip = transform_square_size(clip)
+
+        clip = clip.resize((self.width, self.height)).resize(prop)
+
+        return clip
 
     def loop_clip(self, clip, bpm_video: float = None, crossfadein: float = None):
         """Loop main clip.
@@ -143,7 +156,7 @@ class MusicVideo:
 
         clip = VideoFileClip(path, fps_source="fps")
 
-        clip = self.transform_squared_size(clip)
+        clip = self.process_size_clip(clip)
 
         if sync:
 
@@ -196,21 +209,6 @@ class MusicVideo:
                 self.height - clip.h - self.height * 0.005,
             )
         )
-
-        return clip
-
-    def transform_squared_size(self, clip, prop=1):
-        """Resize the video."""
-
-        # Resize
-        clip = clip.crop(
-            x_center=int(clip.w / 2),
-            y_center=int(clip.h / 2),
-            width=min(clip.w, clip.h),
-            height=min(clip.w, clip.h),
-        )
-
-        clip = clip.resize((self.width, self.height)).resize(prop)
 
         return clip
 
@@ -283,3 +281,21 @@ class MusicVideo:
             video = video.subclip(0, cut)
 
         return video
+
+
+def transform_square_size(clip):
+    """Resize the video to fit in a square.
+
+    TO DO: not only square size
+
+    :param clip: Clip to resize"""
+
+    # Resize
+    clip = clip.crop(
+        x_center=int(clip.w / 2),
+        y_center=int(clip.h / 2),
+        width=min(clip.w, clip.h),
+        height=min(clip.w, clip.h),
+    )
+
+    return clip
