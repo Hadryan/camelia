@@ -212,8 +212,10 @@ class MusicVideo:
 
         return clip
 
-    def sync_bpm_clip(self, clip, bpm_video=None, exact_loop=False):
-        """Sync the video with the music."""
+    def sync_bpm_clip(self, clip, bpm_video=None, optimize_loop=True):
+        """Sync the video with the music.
+        
+        :param optimize_loop: Use the video as 1 loop each measure (False) or optimize it (True)"""
 
         # If the BPM of the video is known we might have to truncate it
         if bpm_video:
@@ -224,13 +226,16 @@ class MusicVideo:
             bpm_video = round(60 / clip.duration, 0)
             video_loop_duration = clip.duration
 
+        # limit duration = video_loop_duration when the bpm is not specified
         limit_duration = (clip.duration // video_loop_duration) * video_loop_duration
-
         clip = clip.set_duration(limit_duration)
 
         # Number of loops to fit with the smallest BPM unity of the music
 
-        loops = self.music_bpm // bpm_video
+        if optimize_loop:
+            loops = self.music_bpm // bpm_video
+        else:
+            loops = 1
 
         # Factor to adjust speed
         factor = self.music_bpm / (bpm_video * loops)
